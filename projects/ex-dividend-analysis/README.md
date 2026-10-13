@@ -9,7 +9,7 @@ A Python project for exploring stock-price behavior around ex-dividend dates usi
 - Pulls stock prices around the event window
 - Visualizes price movement and dividend history
 - Exports dividend data to CSV
-- Includes a multi-event analysis script for comparing price changes around ex-dividend dates
+- Includes a second script for building dividend-event windows and calculating price changes
 
 ## Tools
 
@@ -20,5 +20,9 @@ Python, yFinance, Pandas, NumPy, Matplotlib
 ```bash
 python ex_dividend_analysis.py
 ```
+
+## Project note
+
+The Python scripts in this folder are preserved from my original local project. The repository structure, filename organization, and README were added later for presentation on GitHub.
 
 This project is for educational and analytical purposes only.
