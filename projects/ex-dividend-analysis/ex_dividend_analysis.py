@@ -13,7 +13,7 @@ dat = yf.Ticker(ticker_s)
 dividend = dat.dividends
 
 if dividend.empty:
-    print("finito pico nic nenaslo bracho")
+    print("No dividend history found for this ticker.")
     exit()
 
 div_df = dividend.reset_index()
