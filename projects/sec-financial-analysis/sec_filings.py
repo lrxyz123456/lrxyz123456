@@ -1,102 +1,98 @@
+import requests
+import pandas as pd
 import os
 
-import pandas as pd
-import requests
-
-
 SEC_HEADERS = {
-    "User-Agent": os.getenv("SEC_USER_AGENT", "Your Name your.email@example.com")
+    "User-Agent": "YourName your@email.com"
 }
-
 
 def get_company_facts(cik: str):
     cik = cik.zfill(10)
     url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
-    response = requests.get(url, headers=SEC_HEADERS, timeout=30)
+    response = requests.get(url, headers=SEC_HEADERS)
     response.raise_for_status()
     return response.json()
 
-
 def extract_financials(facts, key, columns_map):
+    """
+    facts: SEC JSON
+    key: 'Revenues', 'NetIncomeLoss', 'CashAndCashEquivalentsAtCarryingValue', etc.
+    columns_map: {'val':'field_name', 'end':'date', 'form':'form'}
+    """
     try:
         data = facts["facts"]["us-gaap"][key]["units"]["USD"]
     except KeyError:
         print(f"{key} not found for this company")
         return pd.DataFrame()
+    
+    df = pd.DataFrame(data)
+    df = df[list(columns_map.keys())]
+    df = df.rename(columns=columns_map)
+    return df
 
-    frame = pd.DataFrame(data)
-    frame = frame[list(columns_map.keys())]
-    return frame.rename(columns=columns_map)
-
-
-def save_to_csv(frame, filename, folder="data/processed"):
-    if frame.empty:
+def save_to_csv(df, filename, folder="ingestion/data/processed"):
+    if df.empty:
         return
-
     os.makedirs(folder, exist_ok=True)
     path = os.path.join(folder, filename)
-    frame.to_csv(path, index=False)
+    if os.path.exists(path):
+        df.to_csv(path, mode='a', index=False, header=False)
+    else:
+        df.to_csv(path, index=False)
     print(f"Saved {filename} to {folder}")
 
-
-def build_statements(cik="0000320193"):
-    """Download selected company facts. Default CIK is Apple Inc."""
+if __name__ == "__main__":
+    cik = "0000909832"  # Apple
     facts = get_company_facts(cik)
-
-    revenue = extract_financials(
-        facts,
+    
+    # Income Statement
+    income_df = extract_financials(
+        facts, 
         key="Revenues",
-        columns_map={"end": "date", "val": "revenue", "form": "form"},
+        columns_map={"end":"date", "val":"revenue", "form":"form"}
     )
-    net_income = extract_financials(
+    net_income_df = extract_financials(
         facts,
         key="NetIncomeLoss",
-        columns_map={"end": "date", "val": "net_income", "form": "form"},
+        columns_map={"end":"date", "val":"net_income", "form":"form"}
     )
-    income = pd.merge(revenue, net_income, on=["date", "form"], how="outer")
-
-    cash = extract_financials(
+    income_df = pd.merge(income_df, net_income_df, on=["date","form"], how="outer")
+    save_to_csv(income_df, "income_statement.csv")
+    
+    # Balance Sheet
+    cash_df = extract_financials(
         facts,
         key="CashAndCashEquivalentsAtCarryingValue",
-        columns_map={"end": "date", "val": "cash", "form": "form"},
+        columns_map={"end":"date", "val":"cash", "form":"form"}
     )
-    assets = extract_financials(
+    assets_df = extract_financials(
         facts,
         key="Assets",
-        columns_map={"end": "date", "val": "total_assets", "form": "form"},
+        columns_map={"end":"date", "val":"total_assets", "form":"form"}
     )
-    liabilities = extract_financials(
+    liabilities_df = extract_financials(
         facts,
         key="Liabilities",
-        columns_map={"end": "date", "val": "total_liabilities", "form": "form"},
+        columns_map={"end":"date", "val":"total_liabilities", "form":"form"}
     )
-    balance_sheet = cash.merge(assets, on=["date", "form"], how="outer").merge(
-        liabilities, on=["date", "form"], how="outer"
-    )
-
-    operating_cf = extract_financials(
+    bs_df = cash_df.merge(assets_df, on=["date","form"], how="outer").merge(liabilities_df, on=["date","form"], how="outer")
+    save_to_csv(bs_df, "balance_sheet.csv")
+    
+    # Cash Flow Statement
+    ocf_df = extract_financials(
         facts,
         key="NetCashProvidedByUsedInOperatingActivities",
-        columns_map={"end": "date", "val": "operating_cash_flow", "form": "form"},
+        columns_map={"end":"date", "val":"operating_cash_flow", "form":"form"}
     )
-    investing_cf = extract_financials(
+    icf_df = extract_financials(
         facts,
         key="NetCashProvidedByUsedInInvestingActivities",
-        columns_map={"end": "date", "val": "investing_cash_flow", "form": "form"},
+        columns_map={"end":"date", "val":"investing_cash_flow", "form":"form"}
     )
-    financing_cf = extract_financials(
+    fcf_df = extract_financials(
         facts,
         key="NetCashProvidedByUsedInFinancingActivities",
-        columns_map={"end": "date", "val": "financing_cash_flow", "form": "form"},
+        columns_map={"end":"date", "val":"financing_cash_flow", "form":"form"}
     )
-    cash_flow = operating_cf.merge(investing_cf, on=["date", "form"], how="outer").merge(
-        financing_cf, on=["date", "form"], how="outer"
-    )
-
-    save_to_csv(income, "income_statement.csv")
-    save_to_csv(balance_sheet, "balance_sheet.csv")
-    save_to_csv(cash_flow, "cash_flow.csv")
-
-
-if __name__ == "__main__":
-    build_statements()
+    cf_df = ocf_df.merge(icf_df, on=["date","form"], how="outer").merge(fcf_df, on=["date","form"], how="outer")
+    save_to_csv(cf_df, "cash_flow.csv")
