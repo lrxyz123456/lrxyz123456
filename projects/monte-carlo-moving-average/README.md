@@ -7,17 +7,21 @@ A Python project that simulates synthetic asset-price paths and tests a simple m
 - Generates price paths using Gaussian daily returns
 - Applies a moving-average buy/sell rule
 - Tracks trade profit and loss
-- Repeats the strategy across many simulations
+- Repeats the strategy across multiple simulations
 - Visualizes simulated paths, example trades, and the PnL distribution
 
 ## Tools
 
-Python, Matplotlib, `random`, `collections.deque`
+Python, Matplotlib, `random`
 
 ## Run
 
 ```bash
 python monte_carlo_strategy.py
 ```
+
+## Project note
+
+The Python script in this folder is preserved from my original local project. The repository structure, filename organization, and README were added later for presentation on GitHub.
 
 This is an educational simulation project, not investment advice.
