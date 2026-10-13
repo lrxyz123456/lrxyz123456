@@ -17,7 +17,6 @@ list_of_tickers = [
 
 for ticker in list_of_tickers:
     dat = yf.Ticker(ticker)
-    #obsahuje len 2 values
     dividend_series = dat.dividends
 
     for ex_date, dividend_amount in dividend_series.items():
