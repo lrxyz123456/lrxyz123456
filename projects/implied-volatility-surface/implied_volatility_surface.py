@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 strike_prices = [70, 80, 90, 95, 100, 105, 110, 120, 130]
-exp_dates = np.array([7, 30, 90, 180])           # ← tu np.array
+exp_dates = np.array([7, 30, 90, 180])
 
 IV = [
     [55, 48, 42, 36, 32, 34, 38, 45, 52],
@@ -20,18 +20,18 @@ ax = fig.add_subplot(111, projection='3d')
 
 surf = ax.plot_surface(
     strikes_grid,
-    exp_grid / 365,               # ← teraz to funguje
+    exp_grid / 365,
     iv_grid,
     cmap='viridis',
     edgecolor='none',
     alpha=0.9
 )
 
-# ATM čiara
-atm_iv = iv_grid[:, 6]  # index 4 = strike 100
+# ATM line
+atm_iv = iv_grid[:, 6]
 ax.plot(
     [100] * len(exp_dates),
-    exp_dates / 365,              # ← aj tu funguje
+    exp_dates / 365,
     atm_iv,
     color='red', alpha=1, linewidth=3, linestyle='--', label='ATM IV'
 )
