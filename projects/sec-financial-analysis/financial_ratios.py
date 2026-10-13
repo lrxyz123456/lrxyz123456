@@ -1,100 +1,121 @@
+import pandas as pd
 import os
 
-import pandas as pd
-
-
-def load_csv(folder="data/processed"):
+def load_csv(folder="ingestion/data/processed", nrows=None, chunked=False, chunksize=100_000):
+    """
+    Loads processed CSV files into DataFrames safely.
+    Supports chunked loading for large files.
+    """
     files = {
         "income": "income_statement.csv",
-        "balance_sheet": "balance_sheet.csv",
-        "cash_flow": "cash_flow.csv",
+        "bs": "balance_sheet.csv",
+        "cf": "cash_flow.csv"
     }
 
-    data = {}
-    for key, filename in files.items():
-        path = os.path.join(folder, filename)
+    dfs = {}
+    for key, file in files.items():
+        path = os.path.join(folder, file)
         if not os.path.exists(path):
             raise FileNotFoundError(f"{path} does not exist")
 
-        frame = pd.read_csv(path)
-        frame = frame.loc[:, ~frame.columns.duplicated()]
-        frame["date"] = pd.to_datetime(frame["date"])
+        if chunked:
+            chunks = []
+            for chunk in pd.read_csv(path, chunksize=chunksize, nrows=nrows):
+                # Remove duplicate columns
+                chunk = chunk.loc[:, ~chunk.columns.duplicated()]
+                # Convert numeric columns
+                for col in chunk.columns:
+                    if col not in ["date", "form"]:
+                        chunk[col] = pd.to_numeric(chunk[col], errors="coerce")
+                # Convert date
+                chunk["date"] = pd.to_datetime(chunk["date"])
+                chunks.append(chunk)
+            df = pd.concat(chunks, ignore_index=True)
+        else:
+            df = pd.read_csv(path, nrows=nrows)
+            df = df.loc[:, ~df.columns.duplicated()]
+            for col in df.columns:
+                if col not in ["date", "form"]:
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
+            df["date"] = pd.to_datetime(df["date"])
 
-        for column in frame.columns:
-            if column not in {"date", "form"}:
-                frame[column] = pd.to_numeric(frame[column], errors="coerce")
+        # Ensure date is unique for safe merging
+        df = df.drop_duplicates(subset="date")
+        dfs[key] = df
 
-        frame = frame.drop_duplicates(subset="date")
-        data[key] = frame
+    return dfs["income"], dfs["bs"], dfs["cf"]
 
-    return data["income"], data["balance_sheet"], data["cash_flow"]
+def compute_ratios(income, bs, cf):
+    """
+    Computes financial ratios and merges data safely.
+    """
+    # Sort by date
+    income = income.sort_values("date")
+    bs = bs.sort_values("date")
+    cf = cf.sort_values("date")
 
-
-def compute_ratios(income, balance_sheet, cash_flow):
-    income = income.sort_values("date").copy()
-    balance_sheet = balance_sheet.sort_values("date").copy()
-    cash_flow = cash_flow.sort_values("date").copy()
-
-    if {"revenue"}.issubset(income.columns):
+    # Revenue growth
+    if "revenue" in income.columns:
         income["revenue_growth"] = income["revenue"].pct_change(fill_method=None)
     else:
         income["revenue_growth"] = pd.NA
 
-    if {"net_income", "revenue"}.issubset(income.columns):
+    # Net income margin
+    if "net_income" in income.columns and "revenue" in income.columns:
         income["net_income_margin"] = income["net_income"] / income["revenue"]
     else:
         income["net_income_margin"] = pd.NA
 
-    if {"total_liabilities", "total_assets"}.issubset(balance_sheet.columns):
-        balance_sheet["debt_to_assets"] = (
-            balance_sheet["total_liabilities"] / balance_sheet["total_assets"]
-        )
+    # Debt to assets
+    if "total_liabilities" in bs.columns and "total_assets" in bs.columns:
+        bs["debt_to_assets"] = bs["total_liabilities"] / bs["total_assets"]
     else:
-        balance_sheet["debt_to_assets"] = pd.NA
+        bs["debt_to_assets"] = pd.NA
 
-    merged_cash = cash_flow.merge(
-        balance_sheet[["date", "cash"]].rename(columns={"cash": "balance_sheet_cash"}),
-        on="date",
-        how="left",
-    )
-    merged_cash["cash_runway_months"] = (
-        merged_cash["balance_sheet_cash"]
-        / merged_cash["operating_cash_flow"].abs()
-        * 12
-    )
+    # Cash runway (cash / |operating cash flow| * 12)
+    cf_cols = ["date", "operating_cash_flow"]
+    if "cash" in bs.columns:
+        cf_merged = cf.merge(bs[["date", "cash"]].drop_duplicates("date").rename(columns={"cash": "bs_cash"}), 
+                             on="date", how="left")
+        cf_merged["cash_runway_months"] = cf_merged["bs_cash"] / cf_merged["operating_cash_flow"].abs() * 12
+    else:
+        cf_merged = cf.copy()
+        cf_merged["cash_runway_months"] = pd.NA
 
-    features = income.merge(
-        balance_sheet[
-            ["date", "cash", "total_assets", "total_liabilities", "debt_to_assets"]
-        ],
-        on="date",
-        how="outer",
+    # Merge safely with selected columns only
+    df = income.merge(
+        bs[["date", "cash", "total_assets", "total_liabilities", "debt_to_assets"]].drop_duplicates("date"),
+        on="date", how="outer"
     )
-    features = features.merge(
-        cash_flow[
-            ["date", "operating_cash_flow", "investing_cash_flow", "financing_cash_flow"]
-        ],
-        on="date",
-        how="outer",
+    df = df.merge(
+        cf[["date", "operating_cash_flow", "investing_cash_flow", "financing_cash_flow"]].drop_duplicates("date"),
+        on="date", how="outer"
     )
-    features = features.merge(
-        merged_cash[["date", "cash_runway_months"]],
-        on="date",
-        how="left",
+    df = df.merge(
+        cf_merged[["date", "cash_runway_months"]].drop_duplicates("date"),
+        on="date", how="left"
     )
 
-    return features.sort_values("date").reset_index(drop=True)
+    # Final sorting
+    df = df.sort_values("date").reset_index(drop=True)
 
+    return df
 
-def save_features(frame, filename="features_dataset.csv", folder="data/processed"):
+def save_features(df, filename="features_dataset.csv", folder="ingestion/data/processed"):
     os.makedirs(folder, exist_ok=True)
     path = os.path.join(folder, filename)
-    frame.to_csv(path, index=False)
+    df.to_csv(path, index=False)
     print(f"Saved features dataset to {path}")
 
-
 if __name__ == "__main__":
-    income_df, balance_sheet_df, cash_flow_df = load_csv()
-    features_df = compute_ratios(income_df, balance_sheet_df, cash_flow_df)
+    # Load CSVs (use chunked=True if files are huge)
+    income, bs, cf = load_csv(chunked=False)  # set chunked=True for large datasets
+
+    # Compute ratios safely
+    features_df = compute_ratios(income, bs, cf)
+
+    # Save final features
     save_features(features_df)
+
+    # Display last few rows
     print(features_df.tail())
