@@ -7,7 +7,7 @@ A compact Python visualization project that builds a 3D implied-volatility surfa
 - Strike-price dimension
 - Time-to-expiration dimension
 - Implied-volatility levels
-- At-the-money volatility term structure
+- An ATM reference line
 
 ## Tools
 
@@ -18,5 +18,9 @@ Python, NumPy, Matplotlib
 ```bash
 python implied_volatility_surface.py
 ```
+
+## Project note
+
+The Python script in this folder is preserved from my original local project. The repository structure, filename organization, and README were added later for presentation on GitHub.
 
 The dataset in this example is illustrative rather than live option-chain data.
