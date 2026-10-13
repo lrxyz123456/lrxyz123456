@@ -12,15 +12,20 @@ An experimental Python project for collecting company financial-statement data f
 
 Python, Pandas, Requests
 
-## Notes
+## Run
 
-The SEC requires a descriptive `User-Agent` header. Set the `SEC_USER_AGENT` environment variable before making requests.
+Run the scripts from this project folder. The original code writes and reads files under `ingestion/data/processed`.
+
+Before using the SEC endpoint, replace the placeholder `User-Agent` value in `sec_filings.py` with an appropriate identifying value.
 
 ```bash
-export SEC_USER_AGENT="Your Name your.email@example.com"
 python sec_filings.py
 python financial_ratios.py
 python signal_generator.py
 ```
+
+## Project note
+
+The Python scripts in this folder are preserved from my original local project. The repository structure, filename organization, and README were added later for presentation on GitHub.
 
 This is an educational analytics project. The generated signal is not investment advice.
