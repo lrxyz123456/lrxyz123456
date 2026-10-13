@@ -77,13 +77,13 @@ fig, axs = plt.subplots(4, 1, figsize=(10, 12))
 for path in all_prices:
     axs[0].plot(path, alpha=0.5)
 
-axs[0].set_title("MONTE CARLO DISTRIBJUŠN")
+axs[0].set_title("Monte Carlo Price Paths")
 axs[0].set_xlabel("DAYS")
 axs[0].set_ylabel("PRICE")
 
 # EXAMPLE BnS
 axs[1].plot(BnS_example)
-axs[1].set_title("1. SIM")
+axs[1].set_title("Example Simulation")
 axs[1].set_xlabel("DAYS")
 axs[1].set_ylabel("PRICE")
 axs[1].scatter(all_buy_days, all_buy_prices, color='green', marker='^', s=25, label='Buy')
