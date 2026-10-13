@@ -14,12 +14,22 @@ I am also the founder of **FinLit Academy**, a project focused on improving fina
 - **Technical:** CAD, Aerospace Engineering, Aerodynamics
 - **Business:** Communication, Negotiation, Project Coordination
 
-## Current projects
+## Projects
 
-- **Monte Carlo Asset Price Simulation** — modeling possible asset price paths using probabilistic simulations
-- **Dividend & Return Analysis** — analyzing market and dividend data using Python and yFinance
-- **Random Walk Price Modeling** — exploring price movements using random walks and probability-based models
-- **FinLit Academy** — developing educational content and a digital financial decision-making project for young people
+### [Monte Carlo Moving-Average Strategy Simulation](projects/monte-carlo-moving-average)
+Simulates synthetic asset-price paths, applies a moving-average trading rule, and evaluates PnL across repeated Monte Carlo runs.
+
+### [Ex-Dividend Analysis](projects/ex-dividend-analysis)
+Uses yFinance and Pandas to analyze dividend events and stock-price behavior around ex-dividend dates.
+
+### [Implied Volatility Surface](projects/implied-volatility-surface)
+Builds a 3D visualization of implied volatility across strike prices and option expirations using NumPy and Matplotlib.
+
+### [SEC Financial Analysis Pipeline](projects/sec-financial-analysis)
+Collects selected SEC Company Facts data, calculates financial ratios, and applies a simple rules-based analytical signal.
+
+### FinLit Academy
+Founder of a financial-literacy project focused on educational content, workshops, and the development of a digital financial decision-making application.
 
 ## Current focus
 
@@ -32,4 +42,4 @@ I am interested in opportunities and projects at the intersection of **data, fin
 
 ---
 
-*More project repositories and technical work will be added here over time.*
+*More analytical, finance, and aerospace projects will be added over time.*
